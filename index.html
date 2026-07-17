@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Valutazione di sicurezza — Sistema di voto Mensa Italia</title>
-<meta name="description" content="Revisione statica del codice sorgente del sistema di voto telematico di Mensa Italia — 18 rilievi di sicurezza. VulScan, 14 luglio 2026.">
+<title>Valutazione di sicurezza e replica — Sistema di voto Mensa Italia</title>
+<meta name="description" content="Revisione statica del codice sorgente del sistema di voto telematico di Mensa Italia (VulScan, 14 luglio 2026) — 18 rilievi, con la replica puntuale dello sviluppatore.">
 <meta name="robots" content="noindex, nofollow">
 <style>
   :root {
@@ -24,6 +24,7 @@
     --media-bg: #fadfa3; --media-fg: #6b4a06; --media-edge: #e0bf70;
     --bassa-bg: #cfe8c2; --bassa-fg: #2f5320; --bassa-edge: #a5cd92;
     --warn-bg: #fdf6e3; --warn-edge: #e8d9a8; --warn-fg: #5c4a15;
+    --rep-bg: #f0f4fa; --rep-edge: #c5d4ea; --rep-bar: #4a6fa5; --rep-fg: #24405f;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
     --sans: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
   }
@@ -38,6 +39,7 @@
       --media-bg: #453410; --media-fg: #f0d491; --media-edge: #74581c;
       --bassa-bg: #253a1c; --bassa-fg: #b7dca4; --bassa-edge: #40602f;
       --warn-bg: #2b2617; --warn-edge: #4d442a; --warn-fg: #e3d6a8;
+      --rep-bg: #1a2130; --rep-edge: #2f3f5c; --rep-bar: #5b82bd; --rep-fg: #bcd0ee;
     }
   }
   :root[data-theme="dark"] {
@@ -50,6 +52,7 @@
     --media-bg: #453410; --media-fg: #f0d491; --media-edge: #74581c;
     --bassa-bg: #253a1c; --bassa-fg: #b7dca4; --bassa-edge: #40602f;
     --warn-bg: #2b2617; --warn-edge: #4d442a; --warn-fg: #e3d6a8;
+    --rep-bg: #1a2130; --rep-edge: #2f3f5c; --rep-bar: #5b82bd; --rep-fg: #bcd0ee;
   }
   :root[data-theme="light"] {
     --bg: #ffffff; --bg-soft: #f6f7f9; --bg-sunk: #eef0f4;
@@ -61,6 +64,7 @@
     --media-bg: #fadfa3; --media-fg: #6b4a06; --media-edge: #e0bf70;
     --bassa-bg: #cfe8c2; --bassa-fg: #2f5320; --bassa-edge: #a5cd92;
     --warn-bg: #fdf6e3; --warn-edge: #e8d9a8; --warn-fg: #5c4a15;
+    --rep-bg: #f0f4fa; --rep-edge: #c5d4ea; --rep-bar: #4a6fa5; --rep-fg: #24405f;
   }
 
   * { box-sizing: border-box; }
@@ -75,13 +79,11 @@
   a:hover { text-decoration-thickness: 2px; }
   code { font-family: var(--mono); font-size: 0.86em; background: var(--bg-sunk); padding: 0.12em 0.38em; border-radius: 3px; word-break: break-word; }
 
-  /* ---------- layout ---------- */
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
   .cols { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 3.5rem; align-items: start; }
   @media (max-width: 900px) { .cols { grid-template-columns: 1fr; gap: 0; } }
 
-  /* ---------- masthead ---------- */
-  .masthead { border-bottom: 1px solid var(--rule); background: var(--bg-soft); }
+  .masthead { border-bottom: 1px solid var(--rule); background: var(--bg-soft); position: relative; }
   .masthead-inner { max-width: 1180px; margin: 0 auto; padding: 2.75rem 1.5rem 2.25rem; }
   .brand { font-size: 2rem; font-weight: 700; color: #d92b2b; letter-spacing: -0.02em; margin: 0; }
   @media (prefers-color-scheme: dark) { .brand { color: #ff6b6b; } }
@@ -92,37 +94,35 @@
   .subtitle { color: var(--fg-soft); font-size: 1.05rem; margin: 0 0 0.25rem; }
   .repo-line { font-style: italic; color: var(--fg-faint); font-size: 0.92rem; margin: 0; }
 
-  /* ---------- theme toggle ---------- */
   .toggle {
     position: absolute; top: 1rem; right: 1rem;
     background: var(--bg); border: 1px solid var(--rule); color: var(--fg-soft);
     border-radius: 6px; padding: 0.35rem 0.6rem; cursor: pointer; font: inherit; font-size: 0.78rem;
   }
   .toggle:hover { border-color: var(--fg-faint); color: var(--fg); }
-  .masthead { position: relative; }
 
-  /* ---------- notice ---------- */
   .notice {
     background: var(--warn-bg); border: 1px solid var(--warn-edge); border-left: 4px solid #c9a227;
-    color: var(--warn-fg); border-radius: 5px; padding: 1rem 1.25rem; margin: 2rem 0 0;
-    font-size: 0.92rem;
+    color: var(--warn-fg); border-radius: 5px; padding: 1rem 1.25rem; margin: 2rem 0 0; font-size: 0.92rem;
   }
-  .notice strong { color: inherit; }
   .notice p { margin: 0.4rem 0 0; }
   .notice p:first-child { margin-top: 0; }
 
-  /* ---------- meta table ---------- */
+  .duevoci {
+    background: var(--rep-bg); border: 1px solid var(--rep-edge); border-left: 4px solid var(--rep-bar);
+    color: var(--rep-fg); border-radius: 5px; padding: 1rem 1.25rem; margin: 1.25rem 0 0; font-size: 0.92rem;
+  }
+  .duevoci p { margin: 0.4rem 0 0; }
+  .duevoci p:first-child { margin-top: 0; }
+
   table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
   .meta { margin: 2rem 0 1.25rem; }
   .meta th, .meta td { border: 1px solid var(--rule); padding: 0.55rem 0.8rem; text-align: left; vertical-align: top; }
   .meta th { background: var(--bg-sunk); font-weight: 600; width: 190px; white-space: nowrap; }
   .footnote { font-size: 0.82rem; font-style: italic; color: var(--fg-faint); margin: 0.4rem 0; line-height: 1.5; }
 
-  /* ---------- sidebar TOC ---------- */
   .toc { position: sticky; top: 1.5rem; font-size: 0.86rem; padding: 2.5rem 0; max-height: calc(100vh - 3rem); overflow-y: auto; }
-  @media (max-width: 900px) {
-    .toc { position: static; max-height: none; border-bottom: 1px solid var(--rule); padding-bottom: 1.5rem; }
-  }
+  @media (max-width: 900px) { .toc { position: static; max-height: none; border-bottom: 1px solid var(--rule); padding-bottom: 1.5rem; } }
   .toc h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--fg-faint); margin: 0 0 0.75rem; font-weight: 700; }
   .toc ol { list-style: none; margin: 0; padding: 0; }
   .toc > ol > li { margin-bottom: 0.15rem; }
@@ -133,7 +133,6 @@
   .toc .sub a { font-size: 0.8rem; padding: 0.2rem 0.5rem; color: var(--fg-faint); }
   .toc .sub code { background: none; padding: 0; font-size: 0.78rem; font-weight: 600; }
 
-  /* ---------- content ---------- */
   main { padding: 2.5rem 0 5rem; min-width: 0; }
   section { scroll-margin-top: 1.5rem; }
   h2.sec { font-size: 1.4rem; color: var(--accent); margin: 3rem 0 1rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--rule); letter-spacing: -0.01em; }
@@ -144,48 +143,70 @@
   li { margin: 0.35rem 0; }
   .lead { font-size: 1.02rem; }
 
-  /* ---------- severity chips ---------- */
   .sev { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 3px; font-size: 0.78rem; font-weight: 700; border: 1px solid; white-space: nowrap; }
   .sev-critica { background: var(--crit-bg); color: var(--crit-fg); border-color: var(--crit-edge); }
   .sev-alta    { background: var(--alta-bg); color: var(--alta-fg); border-color: var(--alta-edge); }
   .sev-media   { background: var(--media-bg); color: var(--media-fg); border-color: var(--media-edge); }
   .sev-bassa   { background: var(--bassa-bg); color: var(--bassa-fg); border-color: var(--bassa-edge); }
 
-  /* ---------- summary table ---------- */
+  /* verdetto della replica: contorno, per non confondersi con la severità del report */
+  .vd { display: inline-block; padding: 0.08rem 0.5rem; border-radius: 3px; font-size: 0.75rem; font-weight: 600; border: 1px solid; white-space: nowrap; background: transparent; }
+  .vd-concessa      { color: #1f6f4a; border-color: #7ec2a0; }
+  .vd-ridimensionata{ color: #8a5a10; border-color: #ddb673; }
+  .vd-contestata    { color: #7b3b8f; border-color: #c99cd6; }
+  .vd-falso         { color: #2f5597; border-color: #9db8e0; }
+  .vd-fuori         { color: #5f6875; border-color: #b9c0cc; }
+  @media (prefers-color-scheme: dark) {
+    .vd-concessa       { color: #7fd6ab; border-color: #2f6b4f; }
+    .vd-ridimensionata { color: #e8c583; border-color: #6d5424; }
+    .vd-contestata     { color: #d5a6e2; border-color: #6a3f79; }
+    .vd-falso          { color: #9ec1f0; border-color: #35507d; }
+    .vd-fuori          { color: #a3acba; border-color: #454d5b; }
+  }
+  :root[data-theme="dark"] .vd-concessa       { color: #7fd6ab; border-color: #2f6b4f; }
+  :root[data-theme="dark"] .vd-ridimensionata { color: #e8c583; border-color: #6d5424; }
+  :root[data-theme="dark"] .vd-contestata     { color: #d5a6e2; border-color: #6a3f79; }
+  :root[data-theme="dark"] .vd-falso          { color: #9ec1f0; border-color: #35507d; }
+  :root[data-theme="dark"] .vd-fuori          { color: #a3acba; border-color: #454d5b; }
+  :root[data-theme="light"] .vd-concessa       { color: #1f6f4a; border-color: #7ec2a0; }
+  :root[data-theme="light"] .vd-ridimensionata { color: #8a5a10; border-color: #ddb673; }
+  :root[data-theme="light"] .vd-contestata     { color: #7b3b8f; border-color: #c99cd6; }
+  :root[data-theme="light"] .vd-falso          { color: #2f5597; border-color: #9db8e0; }
+  :root[data-theme="light"] .vd-fuori          { color: #5f6875; border-color: #b9c0cc; }
+
+  .azione { font-size: 0.75rem; color: var(--fg-faint); white-space: nowrap; }
+
   .table-scroll { overflow-x: auto; margin: 1.25rem 0; border: 1px solid var(--rule); border-radius: 5px; }
   .summary { font-size: 0.88rem; }
-  .summary thead th { background: var(--accent); color: #fff; font-weight: 600; padding: 0.6rem 0.8rem; text-align: left; white-space: nowrap; }
-  :root[data-theme="dark"] .summary thead th, .summary thead th { }
+  .summary thead th { background: #1f3864; color: #fff; font-weight: 600; padding: 0.6rem 0.8rem; text-align: left; white-space: nowrap; }
   @media (prefers-color-scheme: dark) { .summary thead th { background: #24304a; color: #dce6f7; } }
   :root[data-theme="dark"] .summary thead th { background: #24304a; color: #dce6f7; }
   :root[data-theme="light"] .summary thead th { background: #1f3864; color: #fff; }
+  .summary thead th.rep-col { background: #4a6fa5; }
+  @media (prefers-color-scheme: dark) { .summary thead th.rep-col { background: #35507d; } }
+  :root[data-theme="dark"] .summary thead th.rep-col { background: #35507d; }
+  :root[data-theme="light"] .summary thead th.rep-col { background: #4a6fa5; }
   .summary td { padding: 0.5rem 0.8rem; border-top: 1px solid var(--rule-soft); vertical-align: middle; }
   .summary tbody tr:hover { background: var(--bg-soft); }
   .summary .id-cell { font-weight: 700; white-space: nowrap; }
   .summary .id-cell a { text-decoration: none; }
   .summary .id-cell a:hover { text-decoration: underline; }
   .summary .stato { color: var(--fg-soft); white-space: nowrap; }
+  .summary td.rep-cell { border-left: 1px solid var(--rule); }
 
-  /* ---------- filters ---------- */
   .filters { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin: 1.25rem 0 0.5rem; }
-  .filters .label { font-size: 0.78rem; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; margin-right: 0.25rem; }
-  .fbtn {
-    font: inherit; font-size: 0.8rem; padding: 0.28rem 0.7rem; border-radius: 999px;
-    border: 1px solid var(--rule); background: var(--bg); color: var(--fg-soft); cursor: pointer;
-  }
+  .filters .label { font-size: 0.78rem; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; margin-right: 0.25rem; width: 100%; }
+  @media (min-width: 620px) { .filters .label { width: auto; } }
+  .fbtn { font: inherit; font-size: 0.8rem; padding: 0.28rem 0.7rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--bg); color: var(--fg-soft); cursor: pointer; }
   .fbtn:hover { border-color: var(--fg-faint); color: var(--fg); }
-  .fbtn[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .fbtn[aria-pressed="true"] { background: #1f3864; color: #fff; border-color: #1f3864; font-weight: 600; }
   @media (prefers-color-scheme: dark) { .fbtn[aria-pressed="true"] { background: #2f4a7d; color: #e8eefb; border-color: #2f4a7d; } }
   :root[data-theme="dark"] .fbtn[aria-pressed="true"] { background: #2f4a7d; color: #e8eefb; border-color: #2f4a7d; }
   :root[data-theme="light"] .fbtn[aria-pressed="true"] { background: #1f3864; color: #fff; border-color: #1f3864; }
   .no-js-hide { display: none; }
   .filter-status { font-size: 0.82rem; color: var(--fg-faint); margin: 0.5rem 0 0; }
 
-  /* ---------- finding cards ---------- */
-  .finding {
-    border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem 1.4rem;
-    margin: 1.5rem 0; background: var(--bg-soft); scroll-margin-top: 1.5rem;
-  }
+  .finding { border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem 1.4rem; margin: 1.5rem 0; background: var(--bg-soft); scroll-margin-top: 1.5rem; }
   .finding[hidden] { display: none; }
   .finding > h3 { margin-top: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; font-size: 1.05rem; }
   .finding > h3 .anchor { color: var(--fg-faint); text-decoration: none; font-weight: 400; opacity: 0; transition: opacity 0.12s; }
@@ -196,9 +217,22 @@
   .fmeta td code { background: none; padding: 0; color: var(--fg-soft); }
   .finding p { margin: 0.6rem 0; font-size: 0.94rem; }
   .finding p .k { font-weight: 700; color: var(--accent-fg); }
-  .sev-row-critica td:first-of-type { }
 
-  /* ---------- misc ---------- */
+  .replica {
+    margin: 1.25rem -0.4rem -0.4rem; padding: 0.9rem 1.1rem;
+    background: var(--rep-bg); border: 1px solid var(--rep-edge); border-left: 4px solid var(--rep-bar);
+    border-radius: 5px;
+  }
+  .replica-head { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+  .replica-head .who { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--rep-bar); }
+  @media (prefers-color-scheme: dark) { .replica-head .who { color: var(--rep-fg); } }
+  :root[data-theme="dark"] .replica-head .who { color: var(--rep-fg); }
+  :root[data-theme="light"] .replica-head .who { color: #4a6fa5; }
+  .replica p { margin: 0.5rem 0; font-size: 0.92rem; }
+  .replica p:last-child { margin-bottom: 0; }
+  .replica strong { color: inherit; }
+  .congiunta { font-size: 0.78rem; font-style: italic; color: var(--fg-faint); margin-top: 0.6rem; }
+
   .refs a { word-break: break-word; }
   dl.gloss { margin: 0.75rem 0; }
   dl.gloss dt { font-weight: 700; margin-top: 0.7rem; font-size: 0.94rem; }
@@ -220,7 +254,7 @@
     <p class="brand">VulScan</p>
     <p class="brand-sub">© Marco Lungo &amp; Claude Mirrors</p>
 
-    <h1>Valutazione di sicurezza</h1>
+    <h1>Valutazione di sicurezza, con replica</h1>
     <p class="subtitle">Sistema di voto telematico — analisi statica del codice sorgente</p>
     <p class="repo-line">Repository: votazioni-main</p>
 
@@ -232,11 +266,17 @@
         <tr><th>Rilievi totali</th><td>18 (12 certi, 6 possibili/condizionati)</td></tr>
         <tr><th>Severità critica/alta</th><td>8 rilievi</td></tr>
         <tr><th>Classificazione</th><td>Riservato</td></tr>
+        <tr><th>Replica</th><td>Marco Montanari (<a href="https://github.com/sirmmo">sirmmo</a>) — autore del sistema, punto per punto sui 18 rilievi</td></tr>
       </tbody>
     </table>
 
     <p class="footnote">Le valutazioni di severità e probabilità costituiscono un giudizio professionale e dipendono dal contesto di installazione.</p>
     <p class="footnote">Analisi tecnica condotta su base volontaria, su richiesta di un socio dell'Associazione, sulla base del solo codice sorgente.</p>
+
+    <div class="duevoci" role="note">
+      <p><strong>Come leggere questa pagina.</strong> Il documento riporta <strong>due voci distinte</strong>. Il testo in nero è il report di valutazione redatto da <strong>Marco Lungo</strong> (VulScan, 14 luglio 2026), riprodotto integralmente. I riquadri azzurri contrassegnati <em>“Replica”</em> sono la risposta di <strong>Marco Montanari</strong>, autore del sistema di voto, che discute i rilievi uno per uno.</p>
+      <p>Le due valutazioni <strong>divergono</strong> su diversi punti: severità, impatto reale e stato di correzione. Ogni rilievo espone quindi sia la severità attribuita dal report sia il verdetto della replica, così che il confronto resti verificabile dal lettore.</p>
+    </div>
 
     <div class="notice" role="note">
       <p><strong>Avvertenza.</strong> Documento riservato. Contiene informazioni sulle debolezze di un sistema in uso: la diffusione non controllata può agevolarne l'abuso. Le raccomandazioni vanno validate in ambiente di prova prima dell'applicazione in produzione.</p>
@@ -254,6 +294,7 @@
     <h2>Indice</h2>
     <ol>
       <li><a href="#sintesi">1. Sintesi esecutiva</a></li>
+      <li><a href="#replica">R. Replica dello sviluppatore</a></li>
       <li><a href="#ambito">2. Ambito, metodologia e limiti</a></li>
       <li><a href="#quadro">3. Quadro dei risultati</a></li>
       <li><a href="#dettaglio">4. Dettaglio delle vulnerabilità</a>
@@ -282,6 +323,7 @@
       <li><a href="#raccomandazioni">6. Raccomandazioni prioritizzate</a></li>
       <li><a href="#competenza">7. Competenza e protezione dati</a></li>
       <li><a href="#appendici">8. Appendici</a></li>
+      <li><a href="#somme">R2. Le somme, dalla replica</a></li>
     </ol>
   </nav>
 
@@ -300,6 +342,29 @@
         <li>Eliminare l'invio in copia dei token individuali di voto verso la casella condivisa (<a href="#v5">V5</a>).</li>
       </ul>
       <p><strong>Nota di merito</strong>: la protezione contro il doppio voto e la rimozione del backdoor storico "MENSA_SECRET" risultano già implementate. Il lavoro di messa in sicurezza è quindi avviato ma va completato, con particolare attenzione allo schema di urna che oggi rende la segretezza del voto solo apparente (<a href="#v6">V6</a>).</p>
+
+      <div class="replica">
+        <div class="replica-head">
+          <span class="who">Replica — Marco Montanari</span>
+        </div>
+        <p>Ti ringrazio per avermi nuovamente forzato ad accelerare i tempi. Ringrazio anche il Consiglio per avermi formalmente consegnato il documento con le criticità. Devo dire che è molto interessante e, al di là della discussione astratta, penso sia un bellissimo momento educativo.</p>
+        <p>Un elenco di 18 sigle fa scena, e le sigle CWE/OWASP incutono un certo sacro timore reverenziale. Ma siamo personcine intelligenti: andiamo a vedere cosa c'è oltre al numero. Perché un report non si misura da quante righe ha, ma da quali contano, perché, con quale impatto reale e come si chiudono.</p>
+        <p>Le prendo una per una: il verdetto sui singoli rilievi è nella <a href="#quadro">tabella del §3</a> e, per esteso, in ogni scheda del <a href="#dettaglio">§4</a>. Le somme sono <a href="#somme">in fondo</a>.</p>
+      </div>
+    </section>
+
+    <!-- ========== R ========== -->
+    <section id="replica">
+      <h2 class="sec">R. Replica dello sviluppatore — come si legge</h2>
+      <p>I rilievi del report sono discussi uno per uno da <strong>Marco Montanari</strong>, autore del sistema. Ogni scheda del <a href="#dettaglio">§4</a> riporta, sotto il testo del report, un riquadro <em>Replica</em> con il verdetto e la motivazione. I verdetti usano cinque categorie:</p>
+      <ul>
+        <li><span class="vd vd-concessa">Concessa</span> — il rilievo è riconosciuto reale e viene corretto, pianificato o discusso.</li>
+        <li><span class="vd vd-ridimensionata">Ridimensionata</span> — il difetto esiste, ma la severità attribuita dal report è contestata alla luce del contesto d'esercizio.</li>
+        <li><span class="vd vd-contestata">Contestata</span> — il rilievo è respinto nel merito tecnico o per il contesto d'installazione.</li>
+        <li><span class="vd vd-falso">Falso positivo</span> — il rilievo non corrisponde a quanto effettivamente in esercizio.</li>
+        <li><span class="vd vd-fuori">Fuori categoria</span> — il rilievo non è ritenuto un problema di sicurezza.</li>
+      </ul>
+      <p>Accanto al verdetto, ogni scheda indica lo <strong>stato dell'intervento</strong> dichiarato nella replica (già corretta, in correzione, pianificata, da discutere, nessuna azione). I verdetti e gli stati sono ricavati dal testo della replica; la severità resta quella attribuita dal report.</p>
     </section>
 
     <!-- ========== 2 ========== -->
@@ -310,36 +375,51 @@
       <p><strong>Fuori ambito:</strong> Non sono stati eseguiti test dinamici o penetration test sull'applicazione in esecuzione, né analisi dell'infrastruttura di produzione (rete, TLS, sistema operativo, posta), né revisione delle dipendenze di terze parti riga per riga.</p>
       <p><strong>Limiti e avvertenze:</strong> Le stime di severità e probabilità sono giudizi professionali e dipendono dal modello di minaccia e dal contesto di installazione (esposizione dell'host, presenza di reverse proxy/HTTPS, titolarità delle caselle email). L'assenza di rilievi in un'area non implica assenza di vulnerabilità.</p>
       <p><strong>Scala di severità:</strong> <span class="sev sev-critica">Critica</span> (compromissione diretta di integrità/segretezza del voto o dei segreti) · <span class="sev sev-alta">Alta</span> (impatto rilevante su sicurezza o processo elettorale) · <span class="sev sev-media">Media</span> (impatto significativo ma condizionato) · <span class="sev sev-bassa">Bassa</span> (impatto limitato o fortemente mitigato).</p>
+
+      <div class="replica">
+        <div class="replica-head">
+          <span class="who">Replica — Marco Montanari</span>
+        </div>
+        <p>Su questo punto la replica insiste in più occasioni: l'analisi guarda il sorgente ignorando dove gira. Diversi rilievi (<a href="#v13">V13</a>, <a href="#v12">V12</a>, <a href="#v15">V15</a>) sono contestati proprio perché il contesto d'esercizio — infrastruttura Docker, file statici serviti fuori da Django, un sistema acceso circa un mese l'anno con ~400 scritture per tornata — cambia l'impatto reale rispetto a quanto il codice lascia supporre.</p>
+      </div>
     </section>
 
     <!-- ========== 3 ========== -->
     <section id="quadro">
       <h2 class="sec">3. Quadro dei risultati</h2>
-      <p>La tabella seguente riepiloga i 18 rilievi. Il dettaglio è nel <a href="#dettaglio">§4</a>; ogni identificativo rimanda alla scheda corrispondente.</p>
+      <p>La tabella seguente riepiloga i 18 rilievi, affiancando alla valutazione del report il <strong>verdetto della replica</strong> e lo stato dell'intervento dichiarato. Il dettaglio è nel <a href="#dettaglio">§4</a>; ogni identificativo rimanda alla scheda corrispondente.</p>
       <div class="table-scroll">
         <table class="summary">
           <thead>
-            <tr><th scope="col">ID</th><th scope="col">Vulnerabilità</th><th scope="col">Severità</th><th scope="col">Prob.</th><th scope="col">Stato</th></tr>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Vulnerabilità</th>
+              <th scope="col">Severità</th>
+              <th scope="col">Prob.</th>
+              <th scope="col">Stato</th>
+              <th scope="col" class="rep-col">Verdetto replica</th>
+              <th scope="col" class="rep-col">Intervento</th>
+            </tr>
           </thead>
           <tbody>
-            <tr><td class="id-cell"><a href="#v1">V1</a></td><td>Protezione CSRF disabilitata globalmente</td><td><span class="sev sev-critica">Critica</span></td><td>Alta</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v2">V2</a></td><td>Credenziali email in chiaro nel codice sorgente</td><td><span class="sev sev-critica">Critica</span></td><td>Alta</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v3">V3</a></td><td>SECRET_KEY hardcoded e di tipo "django-insecure"</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v4">V4</a></td><td>Nessuna validazione della scheda: candidato/categoria arbitrari</td><td><span class="sev sev-alta">Alta</span></td><td>Alta</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v5">V5</a></td><td>Token di voto di tutti gli elettori in copia a una casella condivisa</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v6">V6</a></td><td>Segretezza del voto vanificabile per correlazione temporale</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v7">V7</a></td><td>Ricevuta verificabile: rischio di coercizione e voto di scambio</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v8">V8</a></td><td>Django 3.2.7 in End-of-Life con CVE note non corrette</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v9">V9</a></td><td>Cookie di sessione e trasporto privi di direttive di sicurezza</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v10">V10</a></td><td>Limite ai campi POST disattivato: proliferazione record e DoS</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v11">V11</a></td><td>Password amministratore distribuita via email e BCC</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v12">V12</a></td><td>Token di voto trasmesso come parametro nell'URL</td><td><span class="sev sev-bassa">Bassa</span></td><td>Media</td><td class="stato">Certa</td></tr>
-            <tr><td class="id-cell"><a href="#v13">V13</a></td><td>Helper di servizio file statici di Django in produzione</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td></tr>
-            <tr><td class="id-cell"><a href="#v14">V14</a></td><td>Login amministrativo privo di rate limiting e CAPTCHA</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td></tr>
-            <tr><td class="id-cell"><a href="#v15">V15</a></td><td>SQLite come database di produzione</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Possibile</td></tr>
-            <tr><td class="id-cell"><a href="#v16">V16</a></td><td>Invio email bloccante nel contesto della richiesta</td><td><span class="sev sev-bassa">Bassa</span></td><td>Media</td><td class="stato">Possibile</td></tr>
-            <tr><td class="id-cell"><a href="#v17">V17</a></td><td>conf.json e template email modificabili via web</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td></tr>
-            <tr><td class="id-cell"><a href="#v18">V18</a></td><td>Gestione errori disabilitata e DEBUG attivabile: rischio info leak</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td></tr>
+            <tr><td class="id-cell"><a href="#v1">V1</a></td><td>Protezione CSRF disabilitata globalmente</td><td><span class="sev sev-critica">Critica</span></td><td>Alta</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-ridimensionata">Ridimensionata</span></td><td class="azione">Fix banale, da fare</td></tr>
+            <tr><td class="id-cell"><a href="#v2">V2</a></td><td>Credenziali email in chiaro nel codice sorgente</td><td><span class="sev sev-critica">Critica</span></td><td>Alta</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-ridimensionata">Ridimensionata</span></td><td class="azione">Già corretta</td></tr>
+            <tr><td class="id-cell"><a href="#v3">V3</a></td><td>SECRET_KEY hardcoded e di tipo "django-insecure"</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-ridimensionata">Ridimensionata</span></td><td class="azione">Già corretta</td></tr>
+            <tr><td class="id-cell"><a href="#v4">V4</a></td><td>Nessuna validazione della scheda: candidato/categoria arbitrari</td><td><span class="sev sev-alta">Alta</span></td><td>Alta</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Già corretta</td></tr>
+            <tr><td class="id-cell"><a href="#v5">V5</a></td><td>Token di voto di tutti gli elettori in copia a una casella condivisa</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">In correzione</td></tr>
+            <tr><td class="id-cell"><a href="#v6">V6</a></td><td>Segretezza del voto vanificabile per correlazione temporale</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-ridimensionata">Ridimensionata</span></td><td class="azione">Si chiude con V5</td></tr>
+            <tr><td class="id-cell"><a href="#v7">V7</a></td><td>Ricevuta verificabile: rischio di coercizione e voto di scambio</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Scelta da discutere</td></tr>
+            <tr><td class="id-cell"><a href="#v8">V8</a></td><td>Django 3.2.7 in End-of-Life con CVE note non corrette</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Pianificata</td></tr>
+            <tr><td class="id-cell"><a href="#v9">V9</a></td><td>Cookie di sessione e trasporto privi di direttive di sicurezza</td><td><span class="sev sev-alta">Alta</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-contestata">Contestata</span></td><td class="azione">Nessuna azione</td></tr>
+            <tr><td class="id-cell"><a href="#v10">V10</a></td><td>Limite ai campi POST disattivato: proliferazione record e DoS</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Da fare</td></tr>
+            <tr><td class="id-cell"><a href="#v11">V11</a></td><td>Password amministratore distribuita via email e BCC</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">In correzione</td></tr>
+            <tr><td class="id-cell"><a href="#v12">V12</a></td><td>Token di voto trasmesso come parametro nell'URL</td><td><span class="sev sev-bassa">Bassa</span></td><td>Media</td><td class="stato">Certa</td><td class="rep-cell"><span class="vd vd-contestata">Contestata</span></td><td class="azione">Nessuna azione</td></tr>
+            <tr><td class="id-cell"><a href="#v13">V13</a></td><td>Helper di servizio file statici di Django in produzione</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-falso">Falso positivo</span></td><td class="azione">Nessuna azione</td></tr>
+            <tr><td class="id-cell"><a href="#v14">V14</a></td><td>Login amministrativo privo di rate limiting e CAPTCHA</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Migliorabile</td></tr>
+            <tr><td class="id-cell"><a href="#v15">V15</a></td><td>SQLite come database di produzione</td><td><span class="sev sev-media">Media</span></td><td>Media</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-contestata">Contestata</span></td><td class="azione">Scelta di progetto</td></tr>
+            <tr><td class="id-cell"><a href="#v16">V16</a></td><td>Invio email bloccante nel contesto della richiesta</td><td><span class="sev sev-bassa">Bassa</span></td><td>Media</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-fuori">Fuori categoria</span></td><td class="azione">Performance, non sicurezza</td></tr>
+            <tr><td class="id-cell"><a href="#v17">V17</a></td><td>conf.json e template email modificabili via web</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Già mitigata</td></tr>
+            <tr><td class="id-cell"><a href="#v18">V18</a></td><td>Gestione errori disabilitata e DEBUG attivabile: rischio info leak</td><td><span class="sev sev-media">Media</span></td><td>Bassa</td><td class="stato">Possibile</td><td class="rep-cell"><span class="vd vd-concessa">Concessa</span></td><td class="azione">Già risolta</td></tr>
           </tbody>
         </table>
       </div>
@@ -348,21 +428,29 @@
     <!-- ========== 4 ========== -->
     <section id="dettaglio">
       <h2 class="sec">4. Dettaglio delle vulnerabilità</h2>
-      <p>Le schede seguono l'ordine di severità del report originale.</p>
+      <p>Le schede seguono l'ordine di severità del report originale. Sotto ogni rilievo, il riquadro azzurro riporta la replica dello sviluppatore.</p>
 
       <div class="filters no-js-hide" id="filters">
-        <span class="label">Filtra</span>
+        <span class="label">Filtra per severità (report)</span>
         <button class="fbtn" type="button" data-filter="all" aria-pressed="true">Tutte (18)</button>
-        <button class="fbtn" type="button" data-filter="critica" aria-pressed="false">Critica (2)</button>
-        <button class="fbtn" type="button" data-filter="alta" aria-pressed="false">Alta (6)</button>
-        <button class="fbtn" type="button" data-filter="media" aria-pressed="false">Media (8)</button>
-        <button class="fbtn" type="button" data-filter="bassa" aria-pressed="false">Bassa (2)</button>
-        <button class="fbtn" type="button" data-filter="certa" aria-pressed="false">Solo certe (12)</button>
+        <button class="fbtn" type="button" data-filter="sev:critica" aria-pressed="false">Critica (2)</button>
+        <button class="fbtn" type="button" data-filter="sev:alta" aria-pressed="false">Alta (6)</button>
+        <button class="fbtn" type="button" data-filter="sev:media" aria-pressed="false">Media (8)</button>
+        <button class="fbtn" type="button" data-filter="sev:bassa" aria-pressed="false">Bassa (2)</button>
+        <button class="fbtn" type="button" data-filter="stato:certa" aria-pressed="false">Solo certe (12)</button>
+      </div>
+      <div class="filters no-js-hide" id="filters-rep">
+        <span class="label">Filtra per verdetto (replica)</span>
+        <button class="fbtn" type="button" data-filter="vd:concessa" aria-pressed="false">Concesse (9)</button>
+        <button class="fbtn" type="button" data-filter="vd:ridimensionata" aria-pressed="false">Ridimensionate (4)</button>
+        <button class="fbtn" type="button" data-filter="vd:contestata" aria-pressed="false">Contestate (3)</button>
+        <button class="fbtn" type="button" data-filter="vd:falso" aria-pressed="false">Falso positivo (1)</button>
+        <button class="fbtn" type="button" data-filter="vd:fuori" aria-pressed="false">Fuori categoria (1)</button>
       </div>
       <p class="filter-status" id="filter-status" role="status" aria-live="polite"></p>
 
       <!-- V1 -->
-      <article class="finding" id="v1" data-sev="critica" data-stato="certa">
+      <article class="finding" id="v1" data-sev="critica" data-stato="certa" data-vd="ridimensionata">
         <h3>V1 — Protezione CSRF disabilitata globalmente <a class="anchor" href="#v1" aria-label="Link a V1">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-critica">Critica</span></td></tr>
@@ -375,10 +463,20 @@
         <p><span class="k">Impatto:</span> Ogni richiesta POST è falsificabile da un sito terzo mentre la vittima è autenticata. Sono esposte in particolare le funzioni amministrative di stato: scrittura di file sul server (conf.json e template email tramite <code>/management/edit</code>), caricamento dell'elenco aventi diritto (<code>/management/upload</code>), invio massivo delle credenziali (<code>/management/send</code>) e la stessa login dell'area <code>/admin</code>.</p>
         <p><span class="k">Scenario:</span> Un amministratore autenticato che apra una pagina malevola può, a sua insaputa, veder sovrascritto conf.json (candidati, finestra temporale, modalità di voto) o innescato l'invio massivo di email ai soci.</p>
         <p><span class="k">Raccomandazione:</span> Riabilitare CsrfViewMiddleware; mantenere <code>{% csrf_token %}</code> in tutti i form e verificarlo lato server; rimuovere la logica che scarta i campi "csrf"; non utilizzare <code>@csrf_exempt</code>.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-ridimensionata">Ridimensionata</span>
+            <span class="azione">· Fix banale, da fare</span>
+          </div>
+          <p>Per spiegare perché è un problema marginale serve un passaggio più lungo, e vale la pena farlo. Il web si fonda su "chiamate" che leggono o scrivono: quando mandate una mail, scrivete su un server qualcosa che qualcun altro leggerà. La semantica di queste operazioni si riduce a poche parole chiave definite già nel 1996 con l'HTTP/1.0 — GET (legge) e POST (scrive), soprattutto. Il CSRF è l'attacco per cui un sito malevolo fa partire dal <em>tuo</em> browser una POST verso un sito dove sei già autenticato, sfruttando la tua sessione a tua insaputa.</p>
+          <p>La difesa — il token CSRF — serve quando l'autorizzazione viaggia in un <strong>cookie ambientale</strong>. E qui sta il punto: il voto <strong>non si autentica con un cookie</strong>, si autentica con una chiave segreta che sta <em>dentro</em> la richiesta. Chi non ha la tua chiave, con o senza CSRF, non vota. Il CSRF morde davvero solo su admin e management, entrambi disponibili solo agli amministratori. Rischio reale? Marginale. Fix? Una riga di middleware, con il token già presente nei template. <strong>Reale ma marginale, si riattiva in trenta secondi.</strong></p>
+        </div>
       </article>
 
       <!-- V2 -->
-      <article class="finding" id="v2" data-sev="critica" data-stato="certa">
+      <article class="finding" id="v2" data-sev="critica" data-stato="certa" data-vd="ridimensionata">
         <h3>V2 — Credenziali email in chiaro nel codice sorgente <a class="anchor" href="#v2" aria-label="Link a V2">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-critica">Critica</span></td></tr>
@@ -391,10 +489,19 @@
         <p><span class="k">Impatto:</span> Chiunque abbia accesso al codice (repository, backup, copie locali) ottiene credenziali valide per inviare posta a nome di Mensa Italia, con possibilità di phishing verso i soci e danno reputazionale. La chiave MailerSend, ancorché commentata, resta un segreto esposto finché non revocata.</p>
         <p><span class="k">Scenario:</span> Fuoriuscita del repository o di una copia locale → uso della casella istituzionale per inviare comunicazioni fraudolente agli aventi diritto.</p>
         <p><span class="k">Raccomandazione:</span> Revocare e rigenerare IMMEDIATAMENTE entrambe le credenziali. Spostare i segreti in variabili d'ambiente o in un secret manager, mai nel codice. Riscrivere la cronologia Git se il repository è condiviso. Rimuovere del tutto il blocco commentato.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-ridimensionata">Ridimensionata</span>
+            <span class="azione">· Già corretta</span>
+          </div>
+          <p>Come ricordavo, un sistema acceso un mese l'anno, con una password che viene ruotata a ogni tornata elettorale, ha una superficie che non mi interessa nemmeno discutere come "critica". Si può fare meglio? Ovviamente: le credenziali sono già state spostate in variabili d'ambiente. Ma quella soluzione, finché il repository è stato privato per anni, era una comodità di sviluppo, non una porta aperta. <strong>Best practice ignorata, non vulnerabilità critica.</strong> Chiamarla "Critica" è marketing, non ingegneria.</p>
+        </div>
       </article>
 
       <!-- V3 -->
-      <article class="finding" id="v3" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v3" data-sev="alta" data-stato="certa" data-vd="ridimensionata">
         <h3>V3 — SECRET_KEY hardcoded e di tipo "django-insecure" <a class="anchor" href="#v3" aria-label="Link a V3">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -407,10 +514,19 @@
         <p><span class="k">Impatto:</span> La chiave firma token e valori crittografici di Django (token di reset password, valori di <code>django.core.signing</code>, cookie dei messaggi). Una chiave nota/prevedibile riduce le garanzie di integrità di questi meccanismi. Con sessioni su database (default) il cookie di sessione non è direttamente falsificabile dalla sola SECRET_KEY, ma l'esposizione resta un difetto grave, aggravato dall'eventuale condivisione della chiave tra ambienti.</p>
         <p><span class="k">Scenario:</span> Riutilizzo della chiave nota per forgiare valori firmati o token, ove i relativi flussi siano attivi.</p>
         <p><span class="k">Raccomandazione:</span> Generare una SECRET_KEY casuale robusta, univoca per ciascun ambiente, letta da variabile d'ambiente; invalidare quella attuale; forzare la rigenerazione delle sessioni dopo la sostituzione.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-ridimensionata">Ridimensionata</span>
+            <span class="azione">· Già corretta</span>
+          </div>
+          <p>Stessa famiglia di <a href="#v2">V2</a>. La SECRET_KEY firma cookie e token, quindi in teoria permette di forgiarli. Reale in astratto, ma con un'applicazione rigenerata a ogni elezione e un repo privato, l'impatto è circoscritto. Già spostata in variabile d'ambiente. <strong>Da sistemare (fatto), non "Alta" nel contesto.</strong></p>
+        </div>
       </article>
 
       <!-- V4 -->
-      <article class="finding" id="v4" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v4" data-sev="alta" data-stato="certa" data-vd="concessa">
         <h3>V4 — Nessuna validazione della scheda: candidato/categoria arbitrari <a class="anchor" href="#v4" aria-label="Link a V4">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -423,10 +539,19 @@
         <p><span class="k">Impatto:</span> Un elettore legittimo (in possesso di un token valido) può inviare preferenze per candidati o categorie arbitrari o inesistenti e, non essendovi limite al numero di campi (cfr. <a href="#v10">V10</a>), generare un numero elevato di record, alterando i conteggi. Il vincolo <code>unique_together (voteKey, category, candidate)</code> non protegge, perché voteKey è un UUID nuovo per ogni scheda: variando la stringa "categoria" si creano righe multiple per lo stesso candidato.</p>
         <p><span class="k">Scenario:</span> Manipolazione dell'esito da parte di un singolo avente diritto, tramite richiesta POST costruita ad hoc.</p>
         <p><span class="k">Raccomandazione:</span> Validare lato server ogni preferenza contro l'elenco chiuso di candidati e opzioni di conf.json; rifiutare l'intera scheda in presenza di un valore non previsto; imporre il numero atteso di preferenze per categoria; ripristinare un limite ai campi POST (cfr. <a href="#v10">V10</a>).</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Già corretta</span>
+          </div>
+          <p>Il controllo "un voto per categoria" era solo lato browser. Chi bypassa il JavaScript può inviare più candidati validi nella stessa categoria. Lato database viene verificato che per ogni categoria un utente abbia messo un solo voto, quindi si sovrascrivono i voti per tenere solo l'ultimo. In ogni caso, in pubblicazione i candidati inesistenti vengono scartati. <strong>Questa è una vulnerabilità minore, perché non inficia il voto, si chiude con una validazione ulteriore lato server — ed è già implementata.</strong> Grazie per la segnalazione: è esattamente il tipo di critica che serve.</p>
+        </div>
       </article>
 
       <!-- V5 -->
-      <article class="finding" id="v5" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v5" data-sev="alta" data-stato="certa" data-vd="concessa">
         <h3>V5 — Token di voto di tutti gli elettori in copia a una casella condivisa <a class="anchor" href="#v5" aria-label="Link a V5">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -439,10 +564,22 @@
         <p><span class="k">Impatto:</span> Il token è una credenziale al portatore: chi controlla quella casella Gmail può votare al posto di qualunque elettore che non abbia ancora votato e correlare identità e partecipazione. Vengono inoltre concentrati PII e credenziali in un account di terza parte.</p>
         <p><span class="k">Scenario:</span> Compromissione (o uso improprio) della casella di backup → voto fraudolento su larga scala e de-anonimizzazione.</p>
         <p><span class="k">Raccomandazione:</span> Non inviare copie delle credenziali individuali a caselle condivise; se serve tracciare l'invio, registrare solo metadati non sensibili; proteggere l'eventuale casella istituzionale con 2FA e titolarità controllata; valutare token monouso legati alla sessione.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· In correzione</span>
+          </div>
+          <p><strong>Reali, le concedo, e c'è una storia che vale la pena raccontare.</strong></p>
+          <p>Questo comportamento non l'ho inventato io: era così nel software originale — il "mitico" gestionale tedesco in PHP — da cui questo sistema eredita l'impianto. E aveva una ragione precisa: in quel sistema <strong>non esisteva un modo per reinviare il codice di voto a chi lo perdeva</strong>, così si teneva una copia di tutto per poter recuperare. Nel sistema nuovo il reinvio, invece, c'è, ed è nativo. Il che rende quella copia in BCC non una funzione da preservare, ma <strong>un residuo ormai inutile</strong>: copre un caso d'uso che oggi è già gestito meglio, altrove.</p>
+          <p>È esattamente il tipo di eredità che una revisione fatta come <em>processo</em> — e non come istantanea — deve intercettare: la si rimuove, e non si perde nulla. Che una debolezza sia ereditata spiega la sua presenza, non la sua legittimità. <strong>La correggo.</strong> È, tra l'altro, una debolezza <em>sistemica</em>: proprio la categoria che si coglie ragionando sull'architettura, non scorrendo i sorgenti riga per riga.</p>
+          <p class="congiunta">Replica formulata congiuntamente per <a href="#v5">V5</a> e <a href="#v11">V11</a>.</p>
+        </div>
       </article>
 
       <!-- V6 -->
-      <article class="finding" id="v6" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v6" data-sev="alta" data-stato="certa" data-vd="ridimensionata">
         <h3>V6 — Segretezza del voto vanificabile per correlazione temporale <a class="anchor" href="#v6" aria-label="Link a V6">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -455,10 +592,19 @@
         <p><span class="k">Impatto:</span> Chi disponga di accesso al database (o all'area admin) può ricostruire la corrispondenza tra elettore e scheda mediante correlazione per ordine di inserimento e orario, vanificando la segretezza del voto. La separazione fra voteKey ed emailKey è, in queste condizioni, solo apparente.</p>
         <p><span class="k">Scenario:</span> Un amministratore o chiunque acceda al file di database correla le righe Voter/Vote della medesima transazione risalendo dall'identità alla preferenza.</p>
         <p><span class="k">Raccomandazione:</span> Disaccoppiare, nel tempo e nella struttura, la registrazione dell'avvenuto voto dalla memorizzazione della scheda (scritture separate, batch con rimescolamento, ritardi randomizzati); rimuovere Vote/Voter dall'admin o limitarne fortemente la visibilità; valutare uno schema di urna crittografica (voto cifrato con scrutinio separato).</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-ridimensionata">Ridimensionata</span>
+            <span class="azione">· Si chiude con V5</span>
+          </div>
+          <p>I modelli del voto e dell'elettore <strong>non salvano alcun timestamp</strong>: nel database non c'è nulla con cui correlare voto ed elettore. Il rischio esiste solo nei log operativi, che stanno nell'ambiente, non nel codice, e si azzera smettendo di inviare l'ID voto alla casella di <a href="#v5">V5</a>. <strong>Media, non Alta, e legata a V5.</strong></p>
+        </div>
       </article>
 
       <!-- V8 -->
-      <article class="finding" id="v8" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v8" data-sev="alta" data-stato="certa" data-vd="concessa">
         <h3>V8 — Django 3.2.7 in End-of-Life con CVE note non corrette <a class="anchor" href="#v8" aria-label="Link a V8">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -471,10 +617,19 @@
         <p><span class="k">Impatto:</span> Esecuzione su una base non più manutenuta con vulnerabilità note. Alcune CVE potrebbero non essere direttamente raggiungibili date le funzionalità effettivamente usate (SQLite, uso limitato dell'ORM), ma la superficie resta non presidiata e non conforme alle buone pratiche (e a requisiti quali PCI-DSS 6.3.3 sull'aggiornamento).</p>
         <p><span class="k">Scenario:</span> Sfruttamento di una vulnerabilità nota del framework qualora il percorso di codice risulti raggiungibile in produzione.</p>
         <p><span class="k">Raccomandazione:</span> Aggiornare a una versione supportata (Django 4.2 LTS o 5.x) e aggiornare le altre dipendenze; introdurre una scansione automatica delle dipendenze (es. pip-audit) nel processo di rilascio.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Pianificata</span>
+          </div>
+          <p><strong>Vero, senza sconti: si aggiorna.</strong> "Framework fuori supporto con CVE note" non si difende a parole, si difende con un aggiornamento e i test di regressione. <strong>Concedo e pianifico il bump di versione.</strong></p>
+        </div>
       </article>
 
       <!-- V9 -->
-      <article class="finding" id="v9" data-sev="alta" data-stato="certa">
+      <article class="finding" id="v9" data-sev="alta" data-stato="certa" data-vd="contestata">
         <h3>V9 — Cookie di sessione e trasporto privi di direttive di sicurezza <a class="anchor" href="#v9" aria-label="Link a V9">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-alta">Alta</span></td></tr>
@@ -487,10 +642,19 @@
         <p><span class="k">Impatto:</span> I cookie di sessione dell'area amministrativa possono transitare su HTTP e risultano più esposti a intercettazione (MITM) e a furto di sessione; assenti l'HSTS e il redirect forzato a HTTPS.</p>
         <p><span class="k">Scenario:</span> Intercettazione del cookie di sessione admin su rete non fidata in assenza di TLS forzato.</p>
         <p><span class="k">Raccomandazione:</span> Impostare i cookie come Secure e SameSite=Lax/Strict; forzare HTTPS (SECURE_SSL_REDIRECT); abilitare HSTS; mantenere SESSION_COOKIE_HTTPONLY (default attivo); verificare la terminazione TLS a monte.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-contestata">Contestata</span>
+            <span class="azione">· Nessuna azione</span>
+          </div>
+          <p>Mancano i flag che dicono al browser "questo cookie solo su HTTPS". Bellissimo problema. Che non abbiamo perché di fatto solo Django usa i cookies, ma non usiamo nulla di Django se non l'ORM che ci permette di evitare problemi di SQL Injection e simili. <strong>Non usiamo cookies.</strong></p>
+        </div>
       </article>
 
       <!-- V7 -->
-      <article class="finding" id="v7" data-sev="media" data-stato="certa">
+      <article class="finding" id="v7" data-sev="media" data-stato="certa" data-vd="concessa">
         <h3>V7 — Ricevuta verificabile: rischio di coercizione e voto di scambio <a class="anchor" href="#v7" aria-label="Link a V7">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -503,10 +667,20 @@
         <p><span class="k">Impatto:</span> Violazione della proprietà di "receipt-freeness": un elettore può dimostrare a terzi come ha votato, abilitando coercizione e voto di scambio. È un rischio di disegno, indipendente da difetti implementativi.</p>
         <p><span class="k">Scenario:</span> Un terzo richiede all'elettore il vote_id per verificarne le scelte, condizionandone il voto.</p>
         <p><span class="k">Raccomandazione:</span> Consentire la verifica dell'avvenuta registrazione senza rivelare il contenuto della scheda, oppure adottare tecniche note di voto verificabile end-to-end con proprietà di receipt-freeness. Scelta da coordinare con il regolamento elettorale.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Scelta di design da discutere</span>
+          </div>
+          <p><strong>Reale, e onestamente la segnalazione più interessante.</strong></p>
+          <p>Non è un bug: è il classico trade-off dell'e-voting tra <em>verificabilità</em> (il votante controlla che il suo voto sia stato registrato) e <em>receipt-freeness</em> (non deve poter dimostrare a terzi come ha votato). Avere la verificabilità è stata una scelta, e come tutte le scelte ha un prezzo. Discutiamone: è una decisione di design, non un difetto da "correggere in un pomeriggio".</p>
+        </div>
       </article>
 
       <!-- V10 -->
-      <article class="finding" id="v10" data-sev="media" data-stato="certa">
+      <article class="finding" id="v10" data-sev="media" data-stato="certa" data-vd="concessa">
         <h3>V10 — Limite ai campi POST disattivato: proliferazione record e DoS <a class="anchor" href="#v10" aria-label="Link a V10">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -519,10 +693,19 @@
         <p><span class="k">Impatto:</span> Denial-of-service applicativo e proliferazione di record nel database (integrità e disponibilità). Amplifica <a href="#v4">V4</a>.</p>
         <p><span class="k">Scenario:</span> Invio di una singola richiesta POST con decine di migliaia di campi da parte di un avente diritto.</p>
         <p><span class="k">Raccomandazione:</span> Ripristinare un limite ragionevole (default o valore calibrato); validare e limitare il numero di preferenze accettate; introdurre limiti alla dimensione del corpo della richiesta a monte.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Da fare</span>
+          </div>
+          <p>Reale, ed è il gemello di <a href="#v4">V4</a>: senza limite, una scheda malevola può gonfiare i record. Si ripristina il limite di default. Con ~400 POST al mese il "DoS" è più minaccia teorica che scenario, ma <strong>il fix è gratis e lo faccio</strong>.</p>
+        </div>
       </article>
 
       <!-- V11 -->
-      <article class="finding" id="v11" data-sev="media" data-stato="certa">
+      <article class="finding" id="v11" data-sev="media" data-stato="certa" data-vd="concessa">
         <h3>V11 — Password amministratore distribuita via email e BCC <a class="anchor" href="#v11" aria-label="Link a V11">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -535,10 +718,22 @@
         <p><span class="k">Impatto:</span> La password dell'utenza con privilegi massimi risiede in almeno due mailbox in chiaro; il furto di una delle caselle comporta la compromissione dell'area amministrativa.</p>
         <p><span class="k">Scenario:</span> Compromissione della casella amministrativa o della casella di backup → accesso admin completo.</p>
         <p><span class="k">Raccomandazione:</span> Non trasmettere password via email; adottare procedure di primo accesso con reset forzato o consegna out-of-band; evitare il BCC verso caselle condivise; imporre la 2FA sull'area amministrativa.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· In correzione</span>
+          </div>
+          <p><strong>Reali, le concedo, e c'è una storia che vale la pena raccontare.</strong></p>
+          <p>Questo comportamento non l'ho inventato io: era così nel software originale — il "mitico" gestionale tedesco in PHP — da cui questo sistema eredita l'impianto. E aveva una ragione precisa: in quel sistema <strong>non esisteva un modo per reinviare il codice di voto a chi lo perdeva</strong>, così si teneva una copia di tutto per poter recuperare. Nel sistema nuovo il reinvio, invece, c'è, ed è nativo. Il che rende quella copia in BCC non una funzione da preservare, ma <strong>un residuo ormai inutile</strong>: copre un caso d'uso che oggi è già gestito meglio, altrove.</p>
+          <p>È esattamente il tipo di eredità che una revisione fatta come <em>processo</em> — e non come istantanea — deve intercettare: la si rimuove, e non si perde nulla. Che una debolezza sia ereditata spiega la sua presenza, non la sua legittimità. <strong>La correggo.</strong> È, tra l'altro, una debolezza <em>sistemica</em>: proprio la categoria che si coglie ragionando sull'architettura, non scorrendo i sorgenti riga per riga.</p>
+          <p class="congiunta">Replica formulata congiuntamente per <a href="#v5">V5</a> e <a href="#v11">V11</a>.</p>
+        </div>
       </article>
 
       <!-- V13 -->
-      <article class="finding" id="v13" data-sev="media" data-stato="possibile">
+      <article class="finding" id="v13" data-sev="media" data-stato="possibile" data-vd="falso">
         <h3>V13 — Helper di servizio file statici di Django in produzione <a class="anchor" href="#v13" aria-label="Link a V13">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -551,10 +746,19 @@
         <p><span class="k">Impatto:</span> Se attivata in produzione, servirebbe i file statici (<code>STATIC_ROOT = BASE_DIR/static</code>) tramite un meccanismo non irrobustito; la protezione anti-traversal di Django generalmente regge, ma la pratica è sconsigliata.</p>
         <p><span class="k">Scenario:</span> Attivazione del pattern <code>serve()</code> in ambiente esposto senza reverse proxy.</p>
         <p><span class="k">Raccomandazione:</span> Servire gli statici tramite web server/reverse proxy (nginx) o WhiteNoise; non usare <code>serve()</code> in produzione; rimuovere il codice se inutilizzato.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-falso">Falso positivo</span>
+            <span class="azione">· Nessuna azione</span>
+          </div>
+          <p>Qui c'è un abbaglio: quell'helper è <strong>definito ma non collegato</strong> a nessuna rotta. I file statici li serve l'infrastruttura, non Django. <strong>Falso positivo</strong> — o, se preferite, "segnalato dal sorgente, inesistente nel deploy": esattamente il limite di un'analisi che guarda il codice ignorando dove gira.</p>
+        </div>
       </article>
 
       <!-- V14 -->
-      <article class="finding" id="v14" data-sev="media" data-stato="possibile">
+      <article class="finding" id="v14" data-sev="media" data-stato="possibile" data-vd="concessa">
         <h3>V14 — Login amministrativo privo di rate limiting e CAPTCHA <a class="anchor" href="#v14" aria-label="Link a V14">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -567,10 +771,19 @@
         <p><span class="k">Impatto:</span> Espone l'utenza amministrativa a tentativi di forza bruta e credential stuffing. Il token di voto (UUIDv4) è invece robusto alla forza bruta.</p>
         <p><span class="k">Scenario:</span> Attacco automatizzato di indovinamento password contro <code>/admin/login</code>.</p>
         <p><span class="k">Raccomandazione:</span> Introdurre rate limiting e lockout progressivo sui login (es. django-axes), CAPTCHA dopo N tentativi e 2FA per l'area amministrativa.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Migliorabile</span>
+          </div>
+          <p>Reale in astratto. Mitiganti: la password admin è un UUID casuale (spazio di brute-force impraticabile) e la superficie è esposta un mese l'anno. Tra le dipendenze c'è già un modulo CAPTCHA che si può cablare. <strong>Reale, a basso rischio effettivo, migliorabile.</strong></p>
+        </div>
       </article>
 
       <!-- V15 -->
-      <article class="finding" id="v15" data-sev="media" data-stato="possibile">
+      <article class="finding" id="v15" data-sev="media" data-stato="possibile" data-vd="contestata">
         <h3>V15 — SQLite come database di produzione <a class="anchor" href="#v15" aria-label="Link a V15">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -583,10 +796,19 @@
         <p><span class="k">Impatto:</span> Sotto concorrenza sono possibili errori "database is locked" e transazioni fallite (disponibilità e integrità della registrazione). Inoltre l'intero stato (urna e aventi diritto) è un unico file, facilmente esfiltrabile in caso di compromissione dell'host.</p>
         <p><span class="k">Scenario:</span> Picco di voti simultanei allo scadere della finestra → registrazioni fallite; oppure copia del singolo file db.sqlite3.</p>
         <p><span class="k">Raccomandazione:</span> Adottare un RDBMS server (PostgreSQL) per la produzione; se SQLite resta in scenari a bassa concorrenza, cifrare/isolare il file, con backup e controllo degli accessi.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-contestata">Contestata</span>
+            <span class="azione">· Scelta di progetto</span>
+          </div>
+          <p>E qui torniamo all'ingegneria vera. SQLite regge tranquillamente ~400 scritture in un mese. La "regola" dice Postgres; la regola, a questa scala, non ripaga il suo costo. Conta la durabilità/backup del file, e quella è una questione d'ambiente. <strong>Scelta difendibile, non vulnerabilità.</strong> Una best practice vale finché vale davvero.</p>
+        </div>
       </article>
 
       <!-- V17 -->
-      <article class="finding" id="v17" data-sev="media" data-stato="possibile">
+      <article class="finding" id="v17" data-sev="media" data-stato="possibile" data-vd="concessa">
         <h3>V17 — conf.json e template email modificabili via web <a class="anchor" href="#v17" aria-label="Link a V17">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -599,10 +821,19 @@
         <p><span class="k">Impatto:</span> Un attore che ottenga (o forzi via CSRF) una sessione admin può riscrivere i parametri elettorali (candidati, finestra, modalità) o il contenuto delle email inviate ai soci. Funziona da amplificatore di <a href="#v1">V1</a>.</p>
         <p><span class="k">Scenario:</span> CSRF verso <code>/management/edit</code> su amministratore autenticato → riscrittura di conf.json.</p>
         <p><span class="k">Raccomandazione:</span> Restringere ulteriormente l'operazione (conferma esplicita, audit log, controllo d'integrità dei file), applicare la protezione CSRF, versionare le modifiche a conf.json, applicare il principio del privilegio minimo.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Già mitigata</span>
+          </div>
+          <p>Reale: un superuser può scrivere file (in whitelist), e i template renderizzati lato server aprono a un rischio di injection. Superuser-only, quindi bassa probabilità, ma la superficie esiste. Si restringe o si rimuove. <strong>In seguito ad una segnalazione questo percorso è stato protetto ulteriormente nei giorni scorsi.</strong></p>
+        </div>
       </article>
 
       <!-- V18 -->
-      <article class="finding" id="v18" data-sev="media" data-stato="possibile">
+      <article class="finding" id="v18" data-sev="media" data-stato="possibile" data-vd="concessa">
         <h3>V18 — Gestione errori disabilitata e DEBUG attivabile: rischio info leak <a class="anchor" href="#v18" aria-label="Link a V18">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-media">Media</span></td></tr>
@@ -615,10 +846,19 @@
         <p><span class="k">Impatto:</span> Con DEBUG attivo in produzione, un errore mostrerebbe traceback e impostazioni (inclusi potenzialmente segreti) nella pagina di errore. I print possono riversare dati sensibili nei log.</p>
         <p><span class="k">Scenario:</span> Upload malformato con DEBUG erroneamente attivo → pagina di errore con traceback e configurazione.</p>
         <p><span class="k">Raccomandazione:</span> Garantire DEBUG=False in produzione (verifica in fase di deploy); implementare gestione degli errori e pagine 4xx/5xx personalizzate; rimuovere i print diagnostici o sostituirli con logging controllato.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-concessa">Concessa</span>
+            <span class="azione">· Già risolta</span>
+          </div>
+          <p>DEBUG <strong>è già a False di default</strong> (corretto nei commit recenti); che sia attivabile da variabile d'ambiente è il comportamento standard di Django — basta non attivarlo in produzione. La gestione degli errori "muti" va ripulita, quello sì. <strong>Risolta, anche se non è un vero problema di sicurezza.</strong></p>
+        </div>
       </article>
 
       <!-- V12 -->
-      <article class="finding" id="v12" data-sev="bassa" data-stato="certa">
+      <article class="finding" id="v12" data-sev="bassa" data-stato="certa" data-vd="contestata">
         <h3>V12 — Token di voto trasmesso come parametro nell'URL <a class="anchor" href="#v12" aria-label="Link a V12">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-bassa">Bassa</span></td></tr>
@@ -631,10 +871,19 @@
         <p><span class="k">Impatto:</span> Possibile esposizione del token (credenziale al portatore) in registri e cronologie, con rischio di riuso se i log sono accessibili. Sul fronte Referer il rischio è mitigato dalle policy di default dei browser moderni, ma non sui log.</p>
         <p><span class="k">Scenario:</span> Accesso ai log del server o alla cronologia di un dispositivo condiviso → recupero del token e voto per conto dell'elettore (se non ha ancora votato).</p>
         <p><span class="k">Raccomandazione:</span> Trasmettere il token via POST o header; evitarne la comparsa negli URL; ridurre la ritenzione e proteggere i log; considerare token monouso a breve scadenza.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-contestata">Contestata</span>
+            <span class="azione">· Nessuna azione</span>
+          </div>
+          <p>Vero: la chiave in querystring finisce nei log e nella cronologia. Che non sono accessibili se non durante il periodo elettorale e solo marginalmente in infrastruttura Docker. <strong>No, conoscendo l'infrastruttura.</strong></p>
+        </div>
       </article>
 
       <!-- V16 -->
-      <article class="finding" id="v16" data-sev="bassa" data-stato="possibile">
+      <article class="finding" id="v16" data-sev="bassa" data-stato="possibile" data-vd="fuori">
         <h3>V16 — Invio email bloccante nel contesto della richiesta <a class="anchor" href="#v16" aria-label="Link a V16">#</a></h3>
         <table class="fmeta"><tbody>
           <tr><th>Severità</th><td><span class="sev sev-bassa">Bassa</span></td></tr>
@@ -647,6 +896,15 @@
         <p><span class="k">Impatto:</span> La richiesta resta bloccata per un tempo proporzionale al numero di destinatari, con rischio di timeout e di occupazione dei worker e conseguente degrado del servizio. Difetto di affidabilità con potenziale impatto sulla disponibilità.</p>
         <p><span class="k">Scenario:</span> Invio a molte centinaia di destinatari → richiesta in timeout e worker saturi.</p>
         <p><span class="k">Raccomandazione:</span> Delegare l'invio a un task asincrono/coda (es. Celery) o a un management command fuori dal ciclo richiesta; correggere <code>t.run()</code>→<code>t.start()</code> se si intende usare un thread; gestire ritenti ed errori.</p>
+
+        <div class="replica">
+          <div class="replica-head">
+            <span class="who">Replica — Marco Montanari</span>
+            <span class="vd vd-fuori">Fuori categoria</span>
+            <span class="azione">· Performance, non sicurezza</span>
+          </div>
+          <p>Questa non è nemmeno sicurezza: è performance. Rende una richiesta più lenta, non espone nulla. <strong>Fuori categoria.</strong></p>
+        </div>
       </article>
     </section>
 
@@ -690,6 +948,13 @@
         <li>Migrare il database a PostgreSQL (<a href="#v15">V15</a>); rendere asincrono l'invio email (<a href="#v16">V16</a>).</li>
         <li>Irrobustire l'editor di configurazione con audit e controllo d'integrità (<a href="#v17">V17</a>); ripristinare la gestione errori e il logging controllato (<a href="#v18">V18</a>, <a href="#v13">V13</a>).</li>
       </ul>
+
+      <div class="replica">
+        <div class="replica-head">
+          <span class="who">Replica — Marco Montanari</span>
+        </div>
+        <p>La replica accoglie le raccomandazioni su <a href="#v8">V8</a> (aggiornamento pianificato), <a href="#v5">V5</a>/<a href="#v11">V11</a> (rimozione del BCC, in corso), <a href="#v10">V10</a> (ripristino del limite) e <a href="#v14">V14</a> (rate limiting migliorabile); dichiara già applicate quelle su <a href="#v2">V2</a>, <a href="#v3">V3</a>, <a href="#v4">V4</a>, <a href="#v17">V17</a> e <a href="#v18">V18</a>; contesta invece <a href="#v9">V9</a>, <a href="#v12">V12</a>, <a href="#v13">V13</a> e <a href="#v15">V15</a>. Su <a href="#v7">V7</a> chiede una discussione di merito anziché una correzione. Il dettaglio è nelle singole schede del <a href="#dettaglio">§4</a>; le conclusioni <a href="#somme">qui sotto</a>.</p>
+      </div>
     </section>
 
     <!-- ========== 7 ========== -->
@@ -710,6 +975,8 @@
         <li>Django — stato di supporto (End-of-Life del ramo 3.2: aprile 2024) — <a href="https://endoflife.date/django">https://endoflife.date/django</a></li>
         <li>CVE-2022-28346 / CVE-2022-28347 (SQL injection, corrette in Django 3.2.13) — <a href="https://www.djangoproject.com/weblog/2022/apr/11/security-releases/">https://www.djangoproject.com/weblog/2022/apr/11/security-releases/</a></li>
         <li>CVE-2024-42005 (SQL injection, CVSS 9.8; ramo 3.2 non più supportato) — <a href="https://github.com/advisories/GHSA-pv4p-cwwg-4rph">https://github.com/advisories/GHSA-pv4p-cwwg-4rph</a></li>
+        <li>Codice sorgente del sistema di voto (citato dalla replica) — <a href="https://github.com/Mensa-Italia/votazioni">https://github.com/Mensa-Italia/votazioni</a></li>
+        <li>Suite di test del sistema di voto (citata dalla replica) — <a href="https://github.com/Mensa-Italia/votazioni-tests">https://github.com/Mensa-Italia/votazioni-tests</a></li>
       </ul>
 
       <h3>B. Glossario essenziale</h3>
@@ -728,6 +995,21 @@
       <p>Documento riservato. Contiene informazioni sulle debolezze di un sistema in uso: la diffusione non controllata può agevolarne l'abuso. Le raccomandazioni vanno validate in ambiente di prova prima dell'applicazione in produzione.</p>
     </section>
 
+    <!-- ========== R2 ========== -->
+    <section id="somme">
+      <h2 class="sec">R2. Le somme, dalla replica</h2>
+      <div class="replica">
+        <div class="replica-head">
+          <span class="who">Replica — Marco Montanari</span>
+        </div>
+        <p><strong>Tiriamo le somme, onestamente.</strong></p>
+        <p>Delle 18, quelle <strong>reali e da correggere</strong> sono tre nel concreto — <a href="#v8">V8</a> e i micro-fix <a href="#v9">V9</a>/<a href="#v10">V10</a> — più una <strong>scelta di design da discutere</strong>, <a href="#v7">V7</a>. Il resto sono best practice a impatto circoscritto dal contesto (<a href="#v2">V2</a>, <a href="#v3">V3</a>, <a href="#v1">V1</a>), aspetti che gestisce l'infrastruttura (<a href="#v13">V13</a>), trade-off d'ingegneria legittimi (<a href="#v15">V15</a>) o cose che sicurezza non sono (<a href="#v16">V16</a>). Nessuna delle "critiche/alte" più agitate — credenziali, secret key, CSRF — è la catastrofe che il totale "12 gravi" lascia intendere.</p>
+        <p>Ed è qui il momento educativo. Un elenco di 18 sigle spaventa; un'analisi dice <em>quali contano, perché, con quale impatto e come si chiudono</em>. Le vere le ho già corrette nei giorni scorsi o sono banalità da chiudere senza nemmeno troppo sforzo — ed è precisamente ciò che si fa quando la sicurezza la si tratta come un processo, e non come un'arma da dibattito.</p>
+        <p>Un'ultima cosa, perché non sfugga: usare un'"argomentazione tecnica" al servizio di una valutazione sulle persone squalifica entrambe — la critica e il giudizio. Da tecnico, le critiche che servono a migliorare il codice le prendo sempre volentieri, e infatti eccole qui, accolte e lavorate. I sorgenti sono pubblici: <a href="https://github.com/Mensa-Italia/votazioni">https://github.com/Mensa-Italia/votazioni</a> ; la suite di test: <a href="https://github.com/Mensa-Italia/votazioni-tests">https://github.com/Mensa-Italia/votazioni-tests</a></p>
+        <p>Alla luce del sole, come dev'essere.</p>
+      </div>
+    </section>
+
     <p class="totop"><a href="#top">↑ Torna all'inizio</a></p>
   </main>
 
@@ -736,9 +1018,9 @@
 
 <footer>
   <div class="wrap">
-    <span>VulScan 2.3 — © Marco Lungo &amp; Claude Mirrors</span>
-    <span>Riservato · Marco Lungo</span>
-    <span>14 luglio 2026</span>
+    <span>Report: VulScan 2.3 — © Marco Lungo &amp; Claude Mirrors · 14 luglio 2026</span>
+    <span>Replica: Marco Montanari (<a href="https://github.com/sirmmo">sirmmo</a>)</span>
+    <span>Riservato</span>
   </div>
 </footer>
 
@@ -746,18 +1028,26 @@
 (function () {
   "use strict";
 
-  // Filters are useless without JS; only reveal them once JS runs.
-  var filters = document.getElementById("filters");
+  var groups = [document.getElementById("filters"), document.getElementById("filters-rep")].filter(Boolean);
   var status = document.getElementById("filter-status");
-  if (filters) filters.classList.remove("no-js-hide");
+  groups.forEach(function (g) { g.classList.remove("no-js-hide"); });
 
-  var findings = Array.prototype.slice.call(document.querySelectorAll(".finding"));
-  var buttons = Array.prototype.slice.call(filters ? filters.querySelectorAll(".fbtn") : []);
+  var findings = Array.prototype.slice.call(document.querySelectorAll(".finding[data-sev]"));
+  var buttons = [];
+  groups.forEach(function (g) {
+    buttons = buttons.concat(Array.prototype.slice.call(g.querySelectorAll(".fbtn")));
+  });
 
+  // filter key is "<field>:<value>", or the bare string "all"
   function matches(el, f) {
     if (f === "all") return true;
-    if (f === "certa") return el.dataset.stato === "certa";
-    return el.dataset.sev === f;
+    var parts = f.split(":");
+    return el.dataset[parts[0]] === parts[1];
+  }
+
+  function labelFor(f) {
+    var b = buttons.filter(function (x) { return x.dataset.filter === f; })[0];
+    return b ? b.textContent.replace(/\s*\(\d+\)$/, "") : f;
   }
 
   function apply(f) {
@@ -771,7 +1061,9 @@
       b.setAttribute("aria-pressed", String(b.dataset.filter === f));
     });
     if (status) {
-      status.textContent = f === "all" ? "" : "Visualizzati " + shown + " rilievi su " + findings.length + ".";
+      status.textContent = f === "all"
+        ? ""
+        : "Filtro: " + labelFor(f) + " — " + shown + " rilievi su " + findings.length + ".";
     }
   }
 
